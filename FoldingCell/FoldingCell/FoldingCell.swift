@@ -24,17 +24,47 @@
 import UIKit
 
 /// UITableViewCell with folding animation
+
 open class FoldingCell: UITableViewCell {
-    
     @objc open var isUnfolded = false
-    
     /// UIView is displayed when cell open
-    @IBOutlet open var containerView: UIView!
-    @IBOutlet open var containerViewTop: NSLayoutConstraint!
-    
+    open var containerView: UIView = {
+        let containerView = UIView()
+        containerView.backgroundColor = UIColor.black
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+//        // add constraints
+//        containerView <- [
+//          Height(CGFloat(75 * itemCount)),
+//          Left(8),
+//          Right(8),
+//        ]
+//
+        // add identifier
+//        let top = (containerView <- [Top(8)]).first
+//        top?.identifier = "ContainerViewTop"
+        containerView.layoutIfNeeded()
+        return containerView
+    }()
     /// UIView whitch display when cell close
-    @IBOutlet open var foregroundView: RotatedView!
-    @IBOutlet open var foregroundViewTop: NSLayoutConstraint!
+    open var foregroundView: RotatedView = {
+        let foregroundView = RotatedView()
+        foregroundView.backgroundColor = UIColor.red
+        foregroundView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // add constraints
+//        foregroundView <- [
+//          Height(75),
+//          Left(8),
+//          Right(8),
+//        ]
+        
+//        // add identifier
+//        let top = (foregroundView <- [Top(8)]).first
+//        top?.identifier = "ForegroundViewTop"
+        foregroundView.layoutIfNeeded()
+        return foregroundView
+    }()
+    open var foregroundViewTop = NSLayoutConstraint()
     var animationView: UIView?
     
     ///  the number of folding elements. Default 2
@@ -57,21 +87,25 @@ open class FoldingCell: UITableViewCell {
     }
     
     // MARK: Life Cycle
-    
     open override func awakeFromNib() {
-        super.awakeFromNib()
-        
         commonInit()
+        print("OHBro")
+        super.awakeFromNib()
     }
-    
     /**
      Call this method in methods init(style: UITableViewCellStyle, reuseIdentifier: String?) after creating Views
      */
     @objc open func commonInit() {
+        print("commonInit working")
+        addSubview(foregroundView)
+        addSubview(containerView)
+        foregroundViewTop = NSLayoutConstraint(item: foregroundView, attribute: NSLayoutConstraint.Attribute.top, relatedBy: NSLayoutConstraint.Relation.equal, toItem: contentView, attribute: NSLayoutConstraint.Attribute.top, multiplier: 1, constant: 10)
         configureDefaultState()
-        
         selectionStyle = .none
-        
+         if #available(iOS 9.0, *) {
+            containerView.addConstraint(NSLayoutConstraint(item: containerView, attribute: NSLayoutConstraint.Attribute.top, relatedBy: NSLayoutConstraint.Relation.equal, toItem: topAnchor, attribute: NSLayoutConstraint.Attribute.top, multiplier: 1, constant: 5))
+            foregroundView.addConstraint(NSLayoutConstraint(item: foregroundView, attribute: NSLayoutConstraint.Attribute.top, relatedBy: NSLayoutConstraint.Relation.equal, toItem: topAnchor, attribute: NSLayoutConstraint.Attribute.top, multiplier: 1, constant: 5))
+        }
         containerView.layer.cornerRadius = foregroundView.layer.cornerRadius
         containerView.layer.masksToBounds = true
     }
@@ -79,14 +113,7 @@ open class FoldingCell: UITableViewCell {
     // MARK: configure
     
     private func configureDefaultState() {
-        
-        guard let foregroundViewTop = self.foregroundViewTop,
-            let containerViewTop = self.containerViewTop else {
-                fatalError("set foregroundViewTop or containerViewTop outlets in storyboard")
-        }
-        
-        containerViewTop.constant = foregroundViewTop.constant
-        containerView.alpha = 0
+       self.addConstraint(NSLayoutConstraint(item: containerView, attribute: NSLayoutConstraint.Attribute.top, relatedBy: NSLayoutConstraint.Relation.equal, toItem: foregroundView, attribute: NSLayoutConstraint.Attribute.top, multiplier: 1, constant: foregroundViewTop.constant))
         
         if let height = (foregroundView.constraints.filter { $0.firstAttribute == .height && $0.secondItem == nil }).first?.constant {
             foregroundView.layer.anchorPoint = CGPoint(x: 0.5, y: 1)
@@ -150,7 +177,7 @@ open class FoldingCell: UITableViewCell {
         
         // copy constraints from containerView
         var newConstraints = [NSLayoutConstraint]()
-        for constraint in self.contentView.constraints {
+        for constraint in contentView.constraints {
             if let item = constraint.firstItem as? UIView, item == containerView {
                 let newConstraint = NSLayoutConstraint(item: animationView, attribute: constraint.firstAttribute,
                                                        relatedBy: constraint.relation, toItem: constraint.secondItem, attribute: constraint.secondAttribute,
@@ -274,13 +301,14 @@ open class FoldingCell: UITableViewCell {
     }
     
     @objc open func isAnimating() -> Bool {
-        return animationView?.alpha == 1 ? true : false
+        return animationView?.alpha == 1
     }
     
     // MARK: Animations
     
     @objc open dynamic func animationDuration(_ itemIndex: NSInteger, type: AnimationType) -> TimeInterval {
-        return type == .close ? durationsForCollapsedState[itemIndex] : durationsForExpandedState[itemIndex]
+        let durations = [0.33, 0.26, 0.26] // timing animation for each view
+        return durations[itemIndex]
     }
     
     @objc open var durationsForExpandedState: [TimeInterval] = []
@@ -397,7 +425,6 @@ open class FoldingCell: UITableViewCell {
 }
 
 // MARK: RotatedView
-
 open class RotatedView: UIView {
     
     private enum Const {
@@ -500,10 +527,10 @@ private extension UIView {
 
 // Helper function inserted by Swift 4.2 migrator.
 fileprivate func convertFromCAMediaTimingFunctionName(_ input: CAMediaTimingFunctionName) -> String {
-	return input.rawValue
+    return input.rawValue
 }
 
 // Helper function inserted by Swift 4.2 migrator.
 fileprivate func convertToCAMediaTimingFunctionName(_ input: String) -> CAMediaTimingFunctionName {
-	return CAMediaTimingFunctionName(rawValue: input)
+    return CAMediaTimingFunctionName(rawValue: input)
 }
